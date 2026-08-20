@@ -4,6 +4,7 @@ from routing import get_team
 from model_services import load_model, predict_category
 from priority import get_priority
 from fastapi.middleware.cors import CORSMiddleware
+from resolution_time import estimate_resolution_hours
 
 app = FastAPI()
 app.add_middleware(
@@ -12,6 +13,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 load_model()
 
 class TicketRequest(BaseModel):
@@ -25,11 +27,12 @@ def health():
 def predict(ticket: TicketRequest):
     category, confidence = predict_category(ticket.ticket_text)
     priority = get_priority(ticket.ticket_text)
+    estimated_hours = estimate_resolution_hours(category, priority)
     return {
         "category": category,
-        "priority": priority,          
+        "priority": priority,
         "confidence": round(confidence, 2),
-        "routed_team": get_team(category)
+        "routed_team": get_team(category),
+        "estimated_resolution_hours": estimated_hours
     }
-
 
