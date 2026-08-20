@@ -3,8 +3,15 @@ from pydantic import BaseModel
 from routing import get_team
 from model_services import load_model, predict_category
 from priority import get_priority
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 load_model()
 
 class TicketRequest(BaseModel):
