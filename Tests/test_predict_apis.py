@@ -13,3 +13,8 @@ def test_predict_valid_ticket():
 def test_predict_missing_text_returns_422():
     response = client.post("/predict", json={})
     assert response.status_code == 422
+
+def test_model_status_shows_fake_mode():
+    response = client.get("/model")
+    assert response.status_code == 200
+    assert response.json()["mode"] == "fake"

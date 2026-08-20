@@ -5,6 +5,7 @@ from model_services import load_model, predict_category
 from priority import get_priority
 from fastapi.middleware.cors import CORSMiddleware
 from resolution_time import estimate_resolution_hours
+from model_services import load_model, predict_category, get_model_status
 
 app = FastAPI()
 app.add_middleware(
@@ -36,3 +37,6 @@ def predict(ticket: TicketRequest):
         "estimated_resolution_hours": estimated_hours
     }
 
+@app.get("/model")
+def model_status():
+    return get_model_status()
