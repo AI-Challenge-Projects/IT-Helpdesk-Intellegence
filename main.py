@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routing import get_team
@@ -6,16 +7,20 @@ from priority import get_priority
 from fastapi.middleware.cors import CORSMiddleware
 from resolution_time import estimate_resolution_hours
 from model_services import load_model, predict_category, get_model_status
+from dotenv import load_dotenv
 
-app = FastAPI()
+load_model()
+load_dotenv()
+
+app = FastAPI(title=os.getenv("APP_NAME", "Helpdesk API"))
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-load_model()
 
 class TicketRequest(BaseModel):
     ticket_text: str
@@ -40,3 +45,4 @@ def predict(ticket: TicketRequest):
 @app.get("/model")
 def model_status():
     return get_model_status()
+
