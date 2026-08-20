@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routing import get_team
+from model_services import load_model, predict_category
 
 app = FastAPI()
+load_model()
 
 class TicketRequest(BaseModel):
     ticket_text: str
@@ -13,11 +15,12 @@ def health():
 
 @app.post("/predict")
 def predict(ticket: TicketRequest):
-    fake_category = "Hardware"
+    category, confidence = predict_category(ticket.ticket_text)
     return {
-        "category": fake_category,
-        "priority": "High",
-        "confidence": 0.87,
-        "routed_team": get_team(fake_category)
+        "category": category,
+        "priority": "High",          
+        "confidence": round(confidence, 2),
+        "routed_team": get_team(category)
     }
+
 
