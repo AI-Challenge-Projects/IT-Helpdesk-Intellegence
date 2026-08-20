@@ -17,6 +17,7 @@ def health():
 @app.post("/predict")
 def predict(ticket: TicketRequest):
     category, confidence = predict_category(ticket.ticket_text)
+    priority = get_priority(ticket.ticket_text)
     return {
         "category": category,
         "priority": priority,          
