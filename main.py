@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routing import get_team
@@ -22,6 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class TicketRequest(BaseModel):
     ticket_text: str
 
@@ -31,9 +35,11 @@ def health():
 
 @app.post("/predict")
 def predict(ticket: TicketRequest):
+    logger.info(f"Received ticket: {ticket.ticket_text[:50]}...")
     category, confidence = predict_category(ticket.ticket_text)
     priority = get_priority(ticket.ticket_text)
     estimated_hours = estimate_resolution_hours(category, priority)
+    logger.info(f"Predicted: category={category}, priority={priority}, confidence={confidence}")
     return {
         "category": category,
         "priority": priority,
