@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Helpdesk Ticket Classifier</title>
+<style>
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f2f2f2;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #2b3a55;
+  color: #fff;
+  padding: 16px 24px;
+}
+
+header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+header p {
+  font-size: 13px;
+  color: #cfd6e4;
+  margin-top: 4px;
+}
+
+.container {
+  max-width: 950px;
+  margin: 20px auto;
+  padding: 0 16px;
+}
+
+.box {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.box h2 {
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+input[type=text], textarea, select {
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 14px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+.row > div {
+  flex: 1;
+}
+
+button {
+  margin-top: 14px;
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#predictBtn {
+  background: #2b3a55;
+  color: #fff;
+}
+#predictBtn:hover {
+  background: #1f2b40;
+}
+
+#clearBtn {
+  background: #ddd;
+  color: #333;
+  margin-left: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+th {
+  background: #f7f7f7;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.result-item {
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  padding: 10px 12px;
+  border-radius: 3px;
+}
+.result-item .lbl {
+  font-size: 11px;
+  color: #777;
+  text-transform: uppercase;
+}
+.result-item .val {
+  font-size: 17px;
+  font-weight: bold;
+  margin-top: 3px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+}
+.badge-high { background: #c0392b; }
+.badge-med  { background: #d68910; }
+.badge-low  { background: #27ae60; }
+
+#warnBox {
+  display: none;
+  background: #fff8e1;
+  border: 1px solid #f1d68b;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  margin-top: 10px;
+  border-radius: 3px;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat {
+  flex: 1;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  padding: 10px 12px;
+  text-align: center;
+  border-radius: 3px;
+}
+.stat .n {
+  font-size: 20px;
+  font-weight: bold;
+}
+.stat .l {
+  font-size: 11px;
+  color: #777;
+}
+
+.muted {
+  color: #888;
+  font-size: 12px;
+}
+
+footer {
+  text-align: center;
+  font-size: 11px;
+  color: #999;
+  padding: 20px 0 30px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IT Helpdesk Ticket Classifier</h1>
+  <p>predicts category, priority, team and rough resolution time from ticket text</p>
+</header>
+
+<div class="container">
+
+  <div class="box">
+    <h2>New Ticket</h2>
+    <form id="ticketForm">
+      <label for="subject">Subject</label>
+      <input type="text" id="subject" placeholder="short summary of the issue">
+
+      <label for="desc">Description</label>
+      <textarea id="desc" placeholder="describe the problem, error messages etc"></textarea>
+
+      <div class="row">
+        <div>
+          <label for="submitter">Submitted by</label>
+          <input type="text" id="submitter" placeholder="name / id (optional)">
+        </div>
+        <div>
+          <label for="dept">Department</label>
+          <select id="dept">
+            <option value="">-- select --</option>
+            <option>IT</option>
+            <option>HR</option>
+            <option>Finance</option>
+            <option>Operations</option>
+            <option>Sales</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" id="predictBtn">Predict</button>
+      <button type="reset" id="clearBtn">Clear</button>
+    </form>
+  </div>
+
+  <div class="box">
+    <h2>Result</h2>
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="lbl">Category</div>
+        <div class="val" id="rCat">-</div>
+        <div class="muted" id="rCatConf">confidence: -</div>
+      </div>
+      <div class="result-item">
+        <div class="lbl">Priority</div>
+        <div class="val" id="rPrio">-</div>
+        <div class="muted" id="rPrioConf">confidence: -</div>
+      </div>
+      <div class="result-item">
+        <div class="lbl">Assigned team</div>
+        <div class="val" id="rTeam">-</div>
+      </div>
+      <div class="result-item">
+        <div class="lbl">Est. resolution time</div>
+        <div class="val" id="rTime">-</div>
+        <div class="muted" id="rTimeRange">range: -</div>
+      </div>
+    </div>
+    <div id="warnBox">low keyword match on this one, confidence is weak, probably needs a human to double check the category</div>
+    <p class="muted" style="margin-top:10px;">confidence is a rough score, not a guarantee.</p>
+  </div>
+
+  <div class="box">
+    <h2>Dashboard</h2>
+    <div class="stats">
+      <div class="stat"><div class="n" id="sTotal">0</div><div class="l">total tickets</div></div>
+      <div class="stat"><div class="n" id="sHigh">0</div><div class="l">high priority</div></div>
+      <div class="stat"><div class="n" id="sAvg">-</div><div class="l">avg resolution</div></div>
+    </div>
+    <table id="catTable">
+      <thead><tr><th>Category</th><th>Count</th></tr></thead>
+      <tbody><tr><td colspan="2" class="muted">no data yet</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h2>Ticket History</h2>
+    <table id="historyTable">
+      <thead>
+        <tr>
+          <th>ID</th><th>Subject</th><th>Category</th><th>Priority</th><th>Team</th><th>Est. time</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="6" class="muted">nothing submitted yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>frontend demo only, no backend hooked up yet</footer>
+
+<script>
+// keyword lists used to fake the tf-idf classifier for now
+var catWords = {
+  "Network": ["vpn","wifi","internet","network","connect","router","dns","ip address","offline","lan"],
+  "Hardware": ["laptop","monitor","printer","keyboard","mouse","battery","screen","charger","device"],
+  "Software": ["install","crash","error","update","license","application","bug","freeze","excel","outlook"],
+  "Access": ["password","login","access","locked","permission","2fa","authentication","reset password"],
+  "Email": ["email","mailbox","inbox","spam","outlook","exchange","smtp"]
+};
+
+var teamMap = {
+  "Network": "Network Team",
+  "Hardware": "Hardware Team",
+  "Software": "Software Team",
+  "Access": "Security Team",
+  "Email": "Messaging Team"
+};
+
+var highWords = ["urgent","asap","down","cannot work","can't work","critical","blocked","outage"];
+var lowWords = ["whenever","no rush","minor","cosmetic","low priority"];
+
+var baseHours = { "Network": 3, "Hardware": 6, "Software": 4, "Access": 1.5, "Email": 2 };
+
+var tickets = [];
+var nextId = 1001;
+
+function countHits(text, words) {
+  var t = text.toLowerCase();
+  var c = 0;
+  for (var i = 0; i < words.length; i++) {
+    if (t.indexOf(words[i]) !== -1) c++;
+  }
+  return c;
+}
+
+function predictCategory(text) {
+  var best = "General";
+  var bestScore = 0;
+  for (var cat in catWords) {
+    var s = countHits(text, catWords[cat]);
+    if (s > bestScore) {
+      bestScore = s;
+      best = cat;
+    }
+  }
+  var conf;
+  if (bestScore === 0) {
+    conf = 30 + Math.floor(Math.random() * 10);
+  } else {
+    conf = Math.min(95, 50 + bestScore * 15);
+  }
+  return { category: best, confidence: conf, weak: bestScore === 0 };
+}
+
+function predictPriority(text) {
+  var h = countHits(text, highWords);
+  var l = countHits(text, lowWords);
+  if (h > 0) return { priority: "High", confidence: Math.min(96, 65 + h * 10) };
+  if (l > 0) return { priority: "Low", confidence: Math.min(90, 60 + l * 10) };
+  return { priority: "Medium", confidence: 55 + Math.floor(Math.random() * 10) };
+}
+
+function estimateTime(cat, priority) {
+  var base = baseHours[cat] || 5;
+  var mult = 1;
+  if (priority === "High") mult = 0.5;
+  if (priority === "Low") mult = 1.8;
+  var hrs = base * mult * (0.9 + Math.random() * 0.3);
+  var label = hrs < 1 ? Math.round(hrs * 60) + "m" : hrs.toFixed(1) + "h";
+  var lo = (hrs * 0.75).toFixed(1);
+  var hi = (hrs * 1.3).toFixed(1);
+  return { hours: hrs, label: label, range: lo + "h - " + hi + "h" };
+}
+
+function badgeClass(p) {
+  if (p === "High") return "badge-high";
+  if (p === "Low") return "badge-low";
+  return "badge-med";
+}
+
+function refreshHistory() {
+  var body = document.getElementById("historyBody");
+  if (tickets.length === 0) {
+    body.innerHTML = '<tr><td colspan="6" class="muted">nothing submitted yet</td></tr>';
+    return;
+  }
+  var rows = "";
+  for (var i = tickets.length - 1; i >= 0; i--) {
+    var t = tickets[i];
+    rows += "<tr>" +
+      "<td>#" + t.id + "</td>" +
+      "<td>" + t.subject + "</td>" +
+      "<td>" + t.category + "</td>" +
+      "<td><span class='badge " + badgeClass(t.priority) + "'>" + t.priority + "</span></td>" +
+      "<td>" + t.team + "</td>" +
+      "<td>" + t.timeLabel + "</td>" +
+      "</tr>";
+  }
+  body.innerHTML = rows;
+}
+
+function refreshDashboard() {
+  document.getElementById("sTotal").textContent = tickets.length;
+
+  var highCount = 0;
+  var totalHours = 0;
+  var catCounts = {};
+  for (var i = 0; i < tickets.length; i++) {
+    if (tickets[i].priority === "High") highCount++;
+    totalHours += tickets[i].hours;
+    var c = tickets[i].category;
+    catCounts[c] = (catCounts[c] || 0) + 1;
+  }
+  document.getElementById("sHigh").textContent = highCount;
+  document.getElementById("sAvg").textContent = tickets.length ? (totalHours / tickets.length).toFixed(1) + "h" : "-";
+
+  var catTableBody = document.querySelector("#catTable tbody");
+  var keys = Object.keys(catCounts);
+  if (keys.length === 0) {
+    catTableBody.innerHTML = '<tr><td colspan="2" class="muted">no data yet</td></tr>';
+  } else {
+    var html = "";
+    for (var k = 0; k < keys.length; k++) {
+      html += "<tr><td>" + keys[k] + "</td><td>" + catCounts[keys[k]] + "</td></tr>";
+    }
+    catTableBody.innerHTML = html;
+  }
+}
+
+document.getElementById("ticketForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  var subject = document.getElementById("subject").value.trim();
+  var desc = document.getElementById("desc").value.trim();
+  if (!subject && !desc) return;
+
+  var fullText = subject + " " + desc;
+
+  var catResult = predictCategory(fullText);
+  var prioResult = predictPriority(fullText);
+  var team = teamMap[catResult.category] || "Triage Team";
+  var timeResult = estimateTime(catResult.category, prioResult.priority);
+
+  document.getElementById("rCat").textContent = catResult.category;
+  document.getElementById("rCatConf").textContent = "confidence: " + catResult.confidence + "%";
+
+  document.getElementById("rPrio").textContent = prioResult.priority;
+  document.getElementById("rPrioConf").textContent = "confidence: " + prioResult.confidence + "%";
+
+  document.getElementById("rTeam").textContent = team;
+  document.getElementById("rTime").textContent = timeResult.label;
+  document.getElementById("rTimeRange").textContent = "range: " + timeResult.range;
+
+  document.getElementById("warnBox").style.display = catResult.weak ? "block" : "none";
+
+  tickets.push({
+    id: nextId++,
+    subject: subject || "(no subject)",
+    category: catResult.category,
+    priority: prioResult.priority,
+    team: team,
+    hours: timeResult.hours,
+    timeLabel: timeResult.label
+  });
+
+  refreshHistory();
+  refreshDashboard();
+});
+</script>
+
+</body>
+</html>
